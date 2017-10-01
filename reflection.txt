@@ -1,0 +1,13 @@
+This path planning implementation works through a series of steps to generate smooth and robust paths. First, it extracts the current vehicle state; cartesian coordinates x, y and yaw, frenet coordinates s and d, and the current speed of the car. Next it extracts any unused path points from the previous planning phase, these will be reused to save on processing time. Finally, the sensor fusion data is extracted, containing the information on nearby vehicles.  
+
+After extraction, the planner steps through each detected vehicle and projects their path forward. Those that are projected to infringe on the area the planner forecasts into are noted.
+
+Next the planner decides if the current lane is blocked, and if so, attempts to initiate a lane change. The availability of neighboring lanes is calculated exclusively, if any condition makes a lane unsuitable, the lane is considered unavailable for the rest of the current planning cycle. All else being equal, changes to the left are preferred.  
+
+Waypoints are generated, starting with the last two existing plan points, if they are available. If existing plan points are not available, the current location of the car is used and a point is generated behind the car based on the current yaw angle. Next, waypoints are generated forward at an increment of the safety gap. The safety gap is defined as half the current speed, plus 5. This allow the car to work within smaller windows for lane changes at lower speeds. 
+
+At this point, the planner converts the waypoints from global coordinates to vehicle coordinates to simplify the math. These converted waypoints are passed to a spline from the C++ spline library (http://kluge.in-chemnitz.de/opensource/spline/) to create smooth paths. 
+
+Finally, new path points are added to the existing path points list until it has points equal to the number of plan points set on line 173. The additional points are generated along the previously created spline utilizing a persistent velocity reference value. The velocity reference is modified at each step to more closely approximate the target velocity. The target velocity is modified based on the conditions found by the extraction and projection process. 
+
+This configuration was able to surpass 6 miles in 5.5 minutes. Unfortunately, the planner is unable to adapt to changes in the environment requiring a reaction in under 10 seconds. To rectify this flaw, I believe refactoring into a planner class would be the ideal. 
